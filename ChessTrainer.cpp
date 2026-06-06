@@ -34,7 +34,7 @@ int main()
 
         if (fromSquare == "q")
             break;
-            std::cin >> toSquare;
+        std::cin >> toSquare;
 
         Position from = chessBoard.parsePosition(fromSquare);
         Position to = chessBoard.parsePosition(toSquare);
@@ -70,23 +70,40 @@ int main()
         else if (piece.type == KING) {
             validMove = chessBoard.isValidKingMove(from, to);
         }
-        if (validMove){
+        if (!validMove) {
+            cout << "\n** Illegal move **\n";
+            continue;
+        }
+        if (chessBoard.wouldMoveLeaveKingInCheck(from, to)) {
+                cout << "Cannot Move. King would be in check.\n";
+                continue;
+            }
             chessBoard.movePiece(from, to);
             std::cout << "\nUpdated Board:\n\n";
             chessBoard.printBoard();
+            if (chessBoard.isCheckmate(WHITE))
+            {
+                cout << "CHECKMATE! Black wins!\n";
+                break;
+            }
+
+            if (chessBoard.isCheckmate(BLACK))
+            {
+                cout << "CHECKMATE! White wins!\n";
+                break;
+            }
             whiteTurn = !whiteTurn;
         }
-        else {
-            cout << "Invalid move!\n";
+        if (chessBoard.isKingInCheck(WHITE)) {
+            cout << "WHITE IS IN CHECK!\n";
         }
-    }
-    std::cin.get();
-    std::cin.get();
 
+        if (chessBoard.isKingInCheck(BLACK)) {
+            cout << "BLACK IS IN CHECK!\n";
+        }
     
-
-
-
+    std::cin.get();
+    std::cin.get();
 
     return 0;
     

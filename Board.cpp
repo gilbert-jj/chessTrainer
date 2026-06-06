@@ -36,6 +36,8 @@ Board::Board() {
 			board[7][3] = { QUEEN, WHITE };
 			board[7][4] = { KING, WHITE };
 
+			blackKingPos = { 0, 4 };
+			whiteKingPos = { 7, 4 };
 		}
 	}
 
@@ -88,8 +90,19 @@ void Board::printBoard() {
 	}
 	
 	void Board::movePiece(Position from, Position to) {
-		board[to.row][to.col] = board[from.row][from.col];
+		Piece movingPiece = board[from.row][from.col];
+
+		board[to.row][to.col] = movingPiece;
 		board[from.row][from.col] = { EMPTY, NONE };
+
+		if (movingPiece.type == KING) {
+			if (movingPiece.color == WHITE) {
+				whiteKingPos = to;
+			}
+			else {
+				blackKingPos = to;
+			}
+		}
 	}
 	
 	bool Board::isValidPawnMove(Position from, Position to) {
@@ -102,11 +115,14 @@ void Board::printBoard() {
 		if (piece.color == WHITE) {
 			bool oneSquare =
 				(to.row == from.row - 1 &&
-					to.col == from.col);
+					to.col == from.col &&
+					target.type == EMPTY);
 			bool twoSquares =
 				(from.row == 6 &&
 					to.row == 4 &&
-					to.col == from.col);
+					to.col == from.col &&
+					board[5][from.col].type == EMPTY &&
+					target.type == EMPTY);
 			bool captureMove =
 				(to.row == from.row - 1 &&
 					(to.col == from.col - 1 ||
@@ -119,11 +135,14 @@ void Board::printBoard() {
 		if (piece.color == BLACK) {
 			bool oneSquare =
 				(to.row == from.row + 1 &&
-					to.col == from.col);
+					to.col == from.col &&
+					target.type == EMPTY);
 			bool twoSquares =
 				(from.row == 1 &&
 					to.row == 3 &&
-					to.col == from.col);
+					to.col == from.col &&
+					board[2][from.col].type == EMPTY &&
+					target.type == EMPTY);
 			bool captureMoves =
 				(to.row == from.row + 1 &&
 					(to.col == from.col - 1 ||
@@ -322,3 +341,160 @@ void Board::printBoard() {
 		}
 		return true;
 	}
+	Position Board::findKing(PieceColor color) {
+		if (color == WHITE) {
+			return whiteKingPos;
+		}
+		return blackKingPos;
+	}
+	bool Board::isKingInCheck(PieceColor color) {
+		Position kingPos = findKing(color);
+		for (int row = 0; row < 8; row++) {
+			for (int col = 0; col < 8; col++) {
+				Piece piece = board[row][col];
+				if (piece.color == NONE) {
+					continue;
+				}
+				if (piece.color == color) {
+					continue;
+				}
+				Position from;
+				from.row = row;
+				from.col = col;
+
+				if (piece.type == PAWN &&
+					isPawnAttacking(from, kingPos)) {
+					return true;
+				}
+				if (piece.type == ROOK &&
+					isValidRookMove(from, kingPos)) {
+					return true;
+				}
+				if (piece.type == KNIGHT &&
+					isValidKnightMove(from, kingPos)) {
+					return true;
+				}
+				if (piece.type == BISHOP &&
+					isValidBishopMove(from, kingPos)) {
+					return true;
+				}
+				if (piece.type == QUEEN &&
+					isValidQueenMove(from, kingPos)) {
+					return true;
+				}
+				if (piece.type == KING &&
+					isValidKingMove(from, kingPos)) {
+					return true;
+				}
+			}
+		}
+			return false;
+		}
+
+	bool Board::wouldMoveLeaveKingInCheck(Position from, Position to) {
+		Piece movingPiece = board[from.row][from.col];
+		Piece capturedPiece = board[to.row][to.col];
+		Position oldWhiteKingPos = whiteKingPos;
+		Position oldBlackKingPos = blackKingPos;
+
+
+		board[to.row][to.col] = movingPiece;
+		board[from.row][from.col] = { EMPTY, NONE };
+		if (movingPiece.type == KING) {
+			if (movingPiece.color == WHITE)
+				whiteKingPos = to;
+			else
+				blackKingPos = to;
+		}
+
+		bool kingInCheck = isKingInCheck(movingPiece.color);
+		cout << "Move tested: "
+			<< from.row << "," << from.col
+			<< " -> "
+			<< to.row << "," << to.col
+			<< "   kingInCheck=" << kingInCheck
+			<< endl;
+		board[from.row][from.col] = movingPiece;
+		board[to.row][to.col] = capturedPiece;
+
+		whiteKingPos = oldWhiteKingPos;
+		blackKingPos = oldBlackKingPos;
+		return kingInCheck;
+	}
+	bool Board::isPawnAttacking(Position from, Position target) {
+		Piece piece = board[from.row][from.col];
+		if (piece.type != PAWN) {
+			return false;
+		}
+		if (piece.color == WHITE) {
+			return target.row == from.row - 1 &&
+				(target.col == from.col - 1 ||
+					target.col == from.col + 1);
+		}
+		if (piece.color == BLACK) {
+			return target.row == from.row + 1 &&
+				(target.col == from.col - 1 ||
+					target.col == from.col + 1);
+		}
+		return false;
+	}
+	bool Board::isCheckmate(PieceColor color) {
+		if (!isKingInCheck(color)) {
+			return false;
+		}
+		return !hasLegalMove(color);
+	}
+	bool Board::hasLegalMove(PieceColor color) {
+		for (int fromRow = 0; fromRow < 8; fromRow++) {
+			for (int fromCol = 0; fromCol < 8; fromCol++) {
+				Piece piece = board[fromRow][fromCol];
+				if (piece.color != color) {
+					continue;
+				}
+				Position from;
+				from.row = fromRow;
+				from.col = fromCol;
+
+				for (int toRow = 0; toRow < 8; toRow++) {
+					for (int toCol = 0; toCol < 8; toCol++) {
+						Position to;
+						to.row = toRow;
+						to.col = toCol;
+						if (!isValidMove(from, to)) {
+							continue;
+						}
+						if (!wouldMoveLeaveKingInCheck(from, to)) {
+							cout << "Legal move found: "
+								<< from.row << "," << from.col
+								<< " -> "
+								<< to.row << "," << to.col
+								<< endl;
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+	bool Board::isValidMove(Position from, Position to) {
+		Piece piece = board[from.row][from.col];
+		switch (piece.type) {
+
+		case PAWN:
+			return isValidPawnMove(from, to);
+		case ROOK:
+			return isValidRookMove(from, to);
+		case KNIGHT:
+			return isValidKnightMove(from, to);
+		case BISHOP:
+			return isValidBishopMove(from, to);
+		case QUEEN:
+			return isValidQueenMove(from, to);
+		case KING:
+			return isValidKingMove(from, to);
+		default:
+			return false;
+		}
+	}
+	

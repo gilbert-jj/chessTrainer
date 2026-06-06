@@ -3,6 +3,7 @@
 #include "Position.h"
 #include <string>
 
+
 class Board
 {
 public:
@@ -26,4 +27,22 @@ public:
 
 	bool isValidKingMove(Position from, Position to);
 
+	Position findKing(PieceColor color);
+	
+	bool isKingInCheck(PieceColor color);
+
+	bool wouldMoveLeaveKingInCheck(Position from, Position to);
+
+	bool isPawnAttacking(Position from, Position target);
+
+	bool isCheckmate(PieceColor color);
+
+	bool hasLegalMove(PieceColor color);
+
+	bool isValidMove(Position from, Position to);
+
+	private:
+
+		Position whiteKingPos;
+		Position blackKingPos;
 };
